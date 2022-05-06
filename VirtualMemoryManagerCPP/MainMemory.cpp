@@ -13,20 +13,19 @@
 using namespace std;
 
 int tlb_hit_counter = 0, tlb_miss_counter = 0;
-int pagehit_counter = 0, pagefault_counter = 0;
+int pagehit_counter = 0, tlb_hit_index = 0, pagefault_counter = 0;;
 int page_stack[2000];
-int tlb_index = 0;
-int tlb_hit_index = 0, lru_index = 0;
+int tlb_index = 0, lru_index = 0;
 int frame_number = 0;
-int tlb_hit_flag = 0, tlb_entry = 0;
+int tlb_hit_flag = 0, tlb_entry = 0, tlb_hit_freq;
 int tlb[TLB_SIZE][2];
-int virtualge_physical_page[PAGE_SIZE][2];
+int physical_page[PAGE_SIZE][2];
 int succ_transl_counter = 0, test = 0;
 char value[256];
 
-bool pageInPageTable(int page_number, int PAGE[PAGE_SIZE][2])
+bool pageInPageTable(int page_number)
 {
-    if (PAGE[page_number][1] == 1) {  return true; }
+    if (physical_page[page_number][1] == 1) {  return true; }
     else { return false; }
 }
 
@@ -35,61 +34,82 @@ bool file_is_empty(std::ifstream& pFile)
     return pFile.peek() == std::ifstream::traits_type::eof();
 }
 
-int frameNumberBuffer(int page_number, char value[], int page_offset)
+int frameNumberBuffer(int _page_number, char _value[], int _page_offset)
 {
-    
-    char buffer[256] = {NULL};
+    // Initialize the buffer which will be used for reading from the disk
+    char char_buffer[256] = {NULL};
+    // Initialize the temporary frame number to 0
     int FrameNumber = 0;
     
+    // Initialize the Main Memory
     MainMemory* list = new MainMemory();
     list->setNextMainMemoryCell(NULL);
     list->setDataBuffer(NULL);
 
-    bool data_is_read = readFromDisk(page_number, buffer);
+    // Read the data from the disk into the char_buffer
+    bool data_is_read = readFromDisk(_page_number, char_buffer);
 
-    FrameNumber = PutInMainMemory(list, buffer, page_number);
-    value[page_number] = buffer[page_offset];
+    if (data_is_read) {
+        
+        // chat_buffer is needed for finding the virtual address assositated value from the disk
+        // If data has been retrieved from the binary without exceptions, then put it (char_buffer) into the main memory
+        FrameNumber = PutInMainMemory(list, char_buffer, _page_number);
+        // Assinging the value to the virtual page
+        _value[_page_number] = char_buffer[_page_offset];
 
-    return FrameNumber;
+        return FrameNumber;
+    }
+    
+    return 0;
+    
 }
+
 
 int PutInMainMemory(MainMemory* head, char buffer[], int page_number)
 {
 
-    MainMemory* current = head;
-    while (current->getNextMainMemoryCell() != NULL)
+    MainMemory* current_memory_cell = head;
+    // Get the last main memory cell
+    while (current_memory_cell->getNextMainMemoryCell() != NULL)
     {
-        current = current->getNextMainMemoryCell();
+        current_memory_cell = current_memory_cell->getNextMainMemoryCell();
     }
 
-    /* Adding Physicall Address */
-
-    current->setDataBuffer(buffer);
-    current->setPhysicalAddress(rand() % 1000 + 1000 + page_number);
-    current->resetNextMemoryCell();
-    current->getNextMainMemoryCell()->setDataBuffer(NULL);
-    current->getNextMainMemoryCell()->setNextMainMemoryCell(NULL);
+    // Set the next memory cell to point to null
+    current_memory_cell->resetNextMemoryCell();
+    current_memory_cell->getNextMainMemoryCell()->setDataBuffer(NULL);
+    current_memory_cell->getNextMainMemoryCell()->setNextMainMemoryCell(NULL);
 
     /* Adding Physicall Address */
 
-    return current->getPhysicalAddress();
+    current_memory_cell->setDataBuffer(buffer); // Put already found character buffer into the last maun memory cell
+    if (page_number > 5000)
+        current_memory_cell->setPhysicalAddress(page_number / 256 * 10000); // Generate the physical address
+    else
+        current_memory_cell->setPhysicalAddress(page_number * 256); // Generate the physical address
+    
+
+    /* Adding Physicall Address */
+
+    return current_memory_cell->getPhysicalAddress();
 
 }
 bool readFromDisk(int _pageNumber, char _buffer[])
 {
-    std::ifstream fp("disk_sim", std::fstream::in | std::fstream::out | std::fstream::app);
+    try {
+        // Read the disk_sim binary file
+        std::ifstream fp("disk_sim", std::fstream::in | std::fstream::out | std::fstream::app);
+
+        fp.seekg(_pageNumber * 256, SEEK_SET);
+        fp.read(_buffer, 256);
 
 
-    if (file_is_empty(fp)) {
-        printf("read BACKING_STORE wrong\n");
+        fp.close();
     }
-
-    fp.seekg(_pageNumber * 256, SEEK_SET);
-    fp.read(_buffer, 256);
-
-    fp.close();
-
-    return false;
+    catch (exception _e) {
+        return false;
+    }
+    return true;
 }
 
 
@@ -137,23 +157,85 @@ void WriteMetricsIntoFile(int _pagefault_counter,
 
 }
 
+    void InitializeTLB() {
+
+        // TLB is a 16 X 2 matrix comprising of pages and the relevant frames. 
+        // The shape of the matrix is 16 X 2 , because the TLB size is 16 as per the homework
+        // requirenments, 2 is devoted for storing the page and frame on each 1 - 16 slot.
+        // First we initialize the tlb with -1s. When a slot is -1, it is empty, so no
+        // page (Virtual Memory) or frame (Physical Memory) is stored.
+        // | -1 | -1 | - 0
+        // | -1 | -1 | - 1
+        //  .........
+        // | -1 | -1 | - 15
+        for (int i = 0; i < TLB_SIZE; i++)
+        {
+            tlb[i][0] = -1; // Page is null
+            tlb[i][1] = -1; // Frame number is null
+        }
+
+    }
+
+    void InitializePageTable() {
+
+        // Page Table is a 256 X 2 matrix comprising of the page and the relevant page status.
+        // The first column (matrix cell) is a frame number, the second is status (BIT STATUS VALID, INVALID = DIRTY).
+        // Initially all the frames are empty with an invalid bit.
+        // Valid bit means that the page is in the Page Table
+        for (int i = 0; i < PAGE_SIZE; i++)
+        {
+            physical_page[i][0] = -1; // Frame number is null.
+            physical_page[i][1] = -1; // 1 = valid, -1 = invalid
+        }
+
+    }
+
+
+    string decimalToBinary(int n)
+    {
+        string output = "";
+        // Size of an integer is assumed to be 32 bits
+        for (int i = 15; i >= 0; i--) {
+            int k = n >> i;
+            if (k & 1)
+                output += "1";
+            else
+                output += "0";
+        }
+
+        return output;
+    }
+
+    int binaryToDecimal(string n)
+    {
+        string num = n;
+        int dec_value = 0;
+
+        // Initializing base value to 1, i.e 2^0
+        int base = 1;
+
+        int len = num.length();
+        for (int i = len - 1; i >= 0; i--) {
+            if (num[i] == '1')
+                dec_value += base;
+            base = base * 2;
+        }
+
+        return dec_value;
+    }
+
+
 void StartSimulation()
 {
+    // Writing the header text into the logs.txt file
     WriteIntroIntoFile();
 
-    int i = 0;
-    //initizate the TLB table
-    for (i = 0; i < TLB_SIZE; i++)
-    {
-        tlb[i][0] = -1;// Page is null
-        tlb[i][1] = -1;// Frame number is null
-    }
-    //initizate the Page table
-    for (i = 0; i < PAGE_SIZE; i++)
-    {
-        virtualge_physical_page[i][0] = -1;//-1 means no frame number
-        virtualge_physical_page[i][1] = -1;//1 is valid; -1 is invalid
-    }
+    // Initializing the Table Lookaside Buffer (Page Table Cache)
+    InitializeTLB();
+    
+    // Initializing the Page Table
+    InitializePageTable();
+
 
     std::ifstream fp("addresses.txt");
     std::string line;
@@ -161,57 +243,71 @@ void StartSimulation()
     size_t read;
 
 
-    for (; std::getline(fp, line); )
+    // Iterating line by line through the addresses.txt
+    for (;std::getline(fp, line);)
     {
-
+        // Converting the input virtual address to binary for the further processing
         int virtual_address = std::stoi(line);
+        string virtual_address_binary = decimalToBinary(virtual_address);
+        string virtual_address_binary_page = virtual_address_binary.substr(0, 8);
+        string virtual_address_binary_offset = virtual_address_binary.substr(8, 16);
 
-        int page_offset = std::stoi(line) & 255;
-        int page = std::stoi(line) & 65280;
-        int page_number = page >> 8;
+        // Retreiving the page offset and page number from the virtual address
+        int page_offset = binaryToDecimal(virtual_address_binary_offset); // Bitwise operation on line and 255.
+        int page_number = binaryToDecimal(virtual_address_binary_page); // Retrieving first 8 bits from the page line
 
-        // Check whether LRU contains a virtual address or not
-        for (i = 0; i < TLB_SIZE; i++)
+        // Check whether TLB contains a virtual address (page number) or not
+        for (int i = 0; i < TLB_SIZE; i++)
         {
-            
             if (tlb[i][0] == page_number)
             {
-                tlb_hit_flag = 1;
-                tlb_hit_index = i;
+                // Page is found in the TLB, so the TLB Hit occurred
+                tlb_hit_flag = 1; // Shows that the hit occurred
+                tlb_hit_index = i; // Shows the place in the TLB where the page hit occurred
                 break;
             }
         }
 
-        // Check whether TLB hit occurred or not
-        if (tlb_hit_flag == 1) // TLB HIT occurred 
+        // TLB HIT occurred 
+        if (tlb_hit_flag == 1)
         {
+            // TLB HIT occurred: Increment the TLB Hit counter for the further metrics calculations
             tlb_hit_counter++;
-            //TLB HIT occurred: Get the frame number and translate it into the physical address
-            printf("Virtual address: %d          Physical address: %d          Value: %hhd\n", virtual_address, (tlb[tlb_hit_index][1] * 256 * 10 + page_offset), value[page_number]);
+            // TLB HIT occurred: Get the frame number
             std::stringstream _text_report;
-            _text_report << "Virtual address: " << virtual_address << "          " << " Physical address: " << (tlb[tlb_hit_index][1] * 256 * 10 + page_offset) << "          " << "Value: " << (int)value[page_number];
+            _text_report << "Virtual address: " << virtual_address << "          " << " Physical address: " << (tlb[tlb_hit_index][1]) << "          " << "Value: " << (int)value[page_number];
             WriteToFile(_text_report.str());
+
+            // Setting back the tlb_hit_flag and tlb_hit_index to -1
             tlb_hit_flag = -1;
             tlb_hit_index = -1;
         }
-        else
-        {
-            tlb_miss_counter++;
-            if (pageInPageTable(page_number, virtualge_physical_page)) {
+        else // TLB MISSS occurred , Check the page in the Page Table
 
+        {
+            // Incrementing the tlb_miss_counter for the futher metrics
+            tlb_miss_counter++;
+
+            // Check if the page is in the page table
+            if (pageInPageTable(page_number)) {
+
+                // Increment the pagehit_counter for the further page hit metrics
                 pagehit_counter++;       
-                tlb_entry = getPageUsingLRU(tlb_entry, page_stack, tlb, virtualge_physical_page, lru_index, page_number);
+                // Get the tlb_entry using the LRU algorithm
+                tlb_entry = getPageUsingLRU(tlb_entry, page_stack, tlb, physical_page, lru_index, page_number);
                 std::stringstream _text_report;
-                _text_report << "Virtual address: " << virtual_address << "          " << " Physical address: " << (virtualge_physical_page[page_number][0] * 256 + page_offset) << "          " << "Value: " << (int)value[page_number];
+                _text_report << "Virtual address: " << virtual_address << "          " << " Physical address: " << (physical_page[page_number][0]) << "          " << "Value: " << (int)value[page_number];
                 WriteToFile(_text_report.str());
             }
             else
             {
-               
+                // If the page number is not in the Page Table , then find it from the buffer
                 frame_number = frameNumberBuffer(page_number, value, page_offset);
-                virtualge_physical_page[page_number][0] = frame_number;
-                virtualge_physical_page[page_number][1] = 1;
-                tlb_entry = getPageUsingLRU(tlb_entry, page_stack, tlb, virtualge_physical_page, lru_index, page_number);
+                // Map the already found frame number to the page number in physical page (Page Table) 
+                physical_page[page_number][0] = frame_number;
+                // Set the bit of the found page number - frame number to valid = 1
+                physical_page[page_number][1] = 1;
+                tlb_entry = getPageUsingLRU(tlb_entry, page_stack, tlb, physical_page, lru_index, page_number);
                 std::stringstream _text_report;
                 _text_report << "Virtual address: " << virtual_address << "          " << " Physical address: " << frame_number * 256 + page_offset << "          " << "Value: " << (int)value[page_number];
                 WriteToFile(_text_report.str());
@@ -224,9 +320,7 @@ void StartSimulation()
 
 
     // Metrics
-    printf("Translated addresses: %d\n", succ_transl_counter);
-    printf("Page fault rate: %f%\n", (((float)pagefault_counter / (float)(pagefault_counter + pagehit_counter + tlb_hit_counter)) * 100));
-    printf("TLB hit rate: %f%\n", (((float)tlb_hit_counter / (float)(tlb_hit_counter + tlb_miss_counter)) * 100));
+    printf("The results were saved in logs.txt");
 
 
     WriteMetricsIntoFile(pagefault_counter, succ_transl_counter, tlb_hit_counter, tlb_miss_counter);

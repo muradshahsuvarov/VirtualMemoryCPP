@@ -14,6 +14,7 @@ private:
 	MainMemory* nextMainMemoryCell;
 	char* dataBuffer;
 	int physicallAddress;
+	
 
 	
 
@@ -48,13 +49,12 @@ private:
 };
 
 
-bool pageInPageTable(int page_number, int PAGE[PAGE_SIZE][2]);
+bool pageInPageTable(int page_number);
 int frameNumberBuffer(int page_number, char value[], int page_offset);
 int getPageUsingLRU(int TLB_Entry, int Track[], int TLB[TLB_SIZE][2], int PAGE[PAGE_SIZE][2], int LRU_Index, int page_number);
 int PutInMainMemory(MainMemory* head, char buffer[], int page_number);
 bool readFromDisk(int _pageNumber, char _buffer[]);
 void StartSimulation();
-bool pageInPageTable(int page_number, int PAGE[PAGE_SIZE][2]);
 bool file_is_empty(std::ifstream& pFile);
 int frameNumberBuffer(int page_number, char value[], int page_offset);
 int PutInMainMemory(MainMemory* head, char buffer[], int page_number);
