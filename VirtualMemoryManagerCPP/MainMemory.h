@@ -1,22 +1,63 @@
+#include <errno.h>
+#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <errno.h>
-
-#define PAGE_SIZE 256
-#define TLB_SIZE 16
+#include <time.h>
+#include <fstream>
+#include "Consts.h"
 
 #pragma once
 class MainMemory
 {
-public:
-	char* buffer;
-	int FrameNumber;
-	MainMemory* next;
+
+private:
+	MainMemory* nextMainMemoryCell;
+	char* dataBuffer;
+	int physicallAddress;
+
+	
+
+	public : void setNextMainMemoryCell(MainMemory* _next) {
+		nextMainMemoryCell = _next;
+	}
+
+	public: MainMemory* getNextMainMemoryCell() {
+		return nextMainMemoryCell;
+	}
+
+	public : void setDataBuffer(char* _dataBuffer) {
+		dataBuffer = _dataBuffer;
+	}
+    
+	public: char* getDataBuffer() {
+		return dataBuffer;
+	}
+
+	public: void setPhysicalAddress(int _physicalAddress) {
+		physicallAddress = _physicalAddress;
+	}
+
+	public: int getPhysicalAddress() {
+		return physicallAddress;
+	}
+
+	public: void resetNextMemoryCell() {
+		nextMainMemoryCell = new MainMemory();
+	}
+
 };
 
 
-int gotoPageTable(int page_number, int PAGE[PAGE_SIZE][2]);
-int backstore(int page_number, char value[], int page_offset);
-int LRU(int TLB_Entry, int Track[], int TLB[TLB_SIZE][2], int PAGE[PAGE_SIZE][2], int LRU_Index, int page_number);
-int push(MainMemory* head, char buffer[], int page_number);
+bool pageInPageTable(int page_number, int PAGE[PAGE_SIZE][2]);
+int frameNumberBuffer(int page_number, char value[], int page_offset);
+int getPageUsingLRU(int TLB_Entry, int Track[], int TLB[TLB_SIZE][2], int PAGE[PAGE_SIZE][2], int LRU_Index, int page_number);
+int PutInMainMemory(MainMemory* head, char buffer[], int page_number);
+bool readFromDisk(int _pageNumber, char _buffer[]);
+void StartSimulation();
+bool pageInPageTable(int page_number, int PAGE[PAGE_SIZE][2]);
+bool file_is_empty(std::ifstream& pFile);
+int frameNumberBuffer(int page_number, char value[], int page_offset);
+int PutInMainMemory(MainMemory* head, char buffer[], int page_number);
+bool readFromDisk(int _pageNumber, char _buffer[]);
+int getPageUsingLRU(int TLB_Entry, int Track[], int TLB[TLB_SIZE][2], int PAGE[PAGE_SIZE][2], int LRU_Index, int page_number);
+void WriteIntroIntoFile();

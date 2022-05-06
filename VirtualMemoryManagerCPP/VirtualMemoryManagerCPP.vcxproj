@@ -24,6 +24,7 @@
     <ProjectGuid>{ff8e68a8-a9a8-46df-8b74-e16ca9842429}</ProjectGuid>
     <RootNamespace>VirtualMemoryManagerCPP</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>VirtualMemoryManager</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -139,15 +140,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="function.cpp" />
     <ClCompile Include="MainMemory.cpp" />
-    <ClCompile Include="project3.cpp" />
+    <ClCompile Include="VirtualMemoryManager.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Consts.h" />
     <ClInclude Include="MainMemory.h" />
   </ItemGroup>
   <ItemGroup>
-    <Text Include="..\..\..\..\..\..\Laman\VirtualPageSimulation_Java\VirtualMemorySimulator2\logs.txt" />
     <Text Include="..\..\..\..\..\..\Laman\VirtualPageSimulation_Java\VirtualMemorySimulator2\output.txt" />
   </ItemGroup>
   <ItemGroup>

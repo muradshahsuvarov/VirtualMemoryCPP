@@ -1,2 +1,6 @@
-﻿  function.cpp
-  VirtualMemoryManagerCPP.vcxproj -> C:\Users\Murad\source\repos\VirtualMemoryManagerCPP\Debug\VirtualMemoryManagerCPP.exe
+﻿C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\MSBuild\Microsoft\VC\v160\Microsoft.CppBuild.targets(513,5): warning MSB8028: The intermediate directory (Debug\) contains files shared from another project (VirtualMemoryManagerCPP.vcxproj).  This can lead to incorrect clean and rebuild behavior.
+  MainMemory.cpp
+C:\Laman\VirtualMemoryManagerCPPV2\VirtualMemoryManagerCPP\MainMemory.cpp(228,12): warning C4778: 'printf' : unterminated format string '%\n'
+C:\Laman\VirtualMemoryManagerCPPV2\VirtualMemoryManagerCPP\MainMemory.cpp(229,12): warning C4778: 'printf' : unterminated format string '%\n'
+C:\Laman\VirtualMemoryManagerCPPV2\VirtualMemoryManagerCPP\MainMemory.cpp(161,12): warning C4101: 'read': unreferenced local variable
+  VirtualMemoryManagerCPP.vcxproj -> C:\Laman\VirtualMemoryManagerCPPV2\Debug\VirtualMemoryManager.exe

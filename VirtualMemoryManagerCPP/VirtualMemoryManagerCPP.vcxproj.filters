@@ -18,10 +18,7 @@
     <ClCompile Include="MainMemory.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="function.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="project3.cpp">
+    <ClCompile Include="VirtualMemoryManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -29,12 +26,12 @@
     <ClInclude Include="MainMemory.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Consts.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\..\..\..\..\..\Laman\VirtualPageSimulation_Java\VirtualMemorySimulator2\output.txt">
-      <Filter>Resource Files</Filter>
-    </Text>
-    <Text Include="..\..\..\..\..\..\Laman\VirtualPageSimulation_Java\VirtualMemorySimulator2\logs.txt">
       <Filter>Resource Files</Filter>
     </Text>
   </ItemGroup>
