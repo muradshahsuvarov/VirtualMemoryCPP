@@ -13,8 +13,8 @@
 using namespace std;
 
 int tlb_hit_counter = 0, tlb_miss_counter = 0;
-int pagehit_counter = 0, tlb_hit_index = 0, pagefault_counter = 0;;
-int page_stack[2000];
+int pagehit_counter = 0, tlb_hit_index = 0, pagefault_counter = 0;
+int page_stack[4050];
 int tlb_index = 0, lru_index = 0;
 int frame_number = 0;
 int tlb_hit_flag = 0, tlb_entry = 0, tlb_hit_freq;
@@ -34,7 +34,7 @@ bool file_is_empty(std::ifstream& pFile)
     return pFile.peek() == std::ifstream::traits_type::eof();
 }
 
-int frameNumberBuffer(int _page_number, char _value[], int _page_offset)
+int frameNumberBackStore(int _page_number, char _value[], int _page_offset)
 {
     // Initialize the buffer which will be used for reading from the disk
     char char_buffer[256] = {NULL};
@@ -84,7 +84,7 @@ int PutInMainMemory(MainMemory* head, char buffer[], int page_number)
 
     current_memory_cell->setDataBuffer(buffer); // Put already found character buffer into the last maun memory cell
     if (page_number > 5000)
-        current_memory_cell->setPhysicalAddress(page_number / 256 * 10000); // Generate the physical address
+        current_memory_cell->setPhysicalAddress( (page_number / 256 ) * 10000); // Generate the physical address
     else
         current_memory_cell->setPhysicalAddress(page_number * 256); // Generate the physical address
     
@@ -94,6 +94,7 @@ int PutInMainMemory(MainMemory* head, char buffer[], int page_number)
     return current_memory_cell->getPhysicalAddress();
 
 }
+// Reading bits from the disk file
 bool readFromDisk(int _pageNumber, char _buffer[])
 {
     try {
@@ -159,7 +160,7 @@ void WriteMetricsIntoFile(int _pagefault_counter,
 
     void InitializeTLB() {
 
-        // TLB is a 16 X 2 matrix comprising of pages and the relevant frames. 
+        // TLB is a 16 X 2 matrix (2D Array) comprising of pages and the relevant frames. 
         // The shape of the matrix is 16 X 2 , because the TLB size is 16 as per the homework
         // requirenments, 2 is devoted for storing the page and frame on each 1 - 16 slot.
         // First we initialize the tlb with -1s. When a slot is -1, it is empty, so no
@@ -237,6 +238,7 @@ void StartSimulation()
     InitializePageTable();
 
 
+    // File Reader
     std::ifstream fp("addresses.txt");
     std::string line;
     size_t len = 0;
@@ -247,12 +249,13 @@ void StartSimulation()
     for (;std::getline(fp, line);)
     {
         // Converting the input virtual address to binary for the further processing
-        int virtual_address = std::stoi(line);
-        string virtual_address_binary = decimalToBinary(virtual_address);
-        string virtual_address_binary_page = virtual_address_binary.substr(0, 8);
-        string virtual_address_binary_offset = virtual_address_binary.substr(8, 16);
+        int virtual_address = std::stoi(line); // Take out number from address.txt and convert it into int
+        string virtual_address_binary = decimalToBinary(virtual_address); // convert the number into 16 bit binary number
+        string virtual_address_binary_page = virtual_address_binary.substr(0, 8); // we read the bytes from left to 8 bits right 
+        string virtual_address_binary_offset = virtual_address_binary.substr(8, VIRTUAL_ADDRESS_SIZE); // read last 8 bits from the 8 bit of the binary converted virtual address
 
         // Retreiving the page offset and page number from the virtual address
+        // Page Number: 00000010 = 2 Page Offset: 00000001 = 1
         int page_offset = binaryToDecimal(virtual_address_binary_offset); // Bitwise operation on line and 255.
         int page_number = binaryToDecimal(virtual_address_binary_page); // Retrieving first 8 bits from the page line
 
@@ -282,7 +285,7 @@ void StartSimulation()
             tlb_hit_flag = -1;
             tlb_hit_index = -1;
         }
-        else // TLB MISSS occurred , Check the page in the Page Table
+        else // TLB MISS occurred , Check the page in the Page Table
 
         {
             // Incrementing the tlb_miss_counter for the futher metrics
@@ -302,7 +305,7 @@ void StartSimulation()
             else
             {
                 // If the page number is not in the Page Table , then find it from the buffer
-                frame_number = frameNumberBuffer(page_number, value, page_offset);
+                frame_number = frameNumberBackStore(page_number, value, page_offset);
                 // Map the already found frame number to the page number in physical page (Page Table) 
                 physical_page[page_number][0] = frame_number;
                 // Set the bit of the found page number - frame number to valid = 1
@@ -352,14 +355,19 @@ int getPageUsingLRU(int _tlb_entry, int _page_stack[], int _tlb[TLB_SIZE][2], in
 
         if (flag == 0)
         {
+            // Optimizing the TLB entries
             _lru_index = (_tlb_entry - 16) % 16;
+
+            // Update the tlb
             _tlb[_lru_index][0] = _page_number;
+
             _tlb_entry++;
 
         }
 
 
     }else {
+        // Update the tlb 
         _tlb[_tlb_entry][0] = _page_number;
         _tlb[_tlb_entry][1] = _page[_page_number][0];
         _page_stack[_tlb_entry] = _page_number;
@@ -369,5 +377,12 @@ int getPageUsingLRU(int _tlb_entry, int _page_stack[], int _tlb[TLB_SIZE][2], in
 
     return _tlb_entry;
 
+}
+
+
+void main()
+{
+    // Starting the virtual memory map simulation
+    StartSimulation();
 }
 

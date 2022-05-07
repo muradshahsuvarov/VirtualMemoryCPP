@@ -1,0 +1,37 @@
+1. How have the simulated page table, physical memory, and the TLB been implemented?
+
+TLB: InitializeTLB() in MainMemory.cpp
+
+2. When a TLB miss occurs, how does the system decide which entry to replace?
+
+If TLM miss occurs you check whether the page number (virutal number) is in the PageTable and 
+if so, you update the tlb by using the LRU function (pageInPageTable). In case
+the the page number isn't persistent in the PageTable, then you load the frame number
+(physical number) from the disk and use the same getPageUsingLRU to update the entry.
+Initially the tlb entry is set to zero, then the LRU function checks whether the TLB SIZE
+is less than or equal to the tlb entry, if so he optimizes the tlb enrtry
+
+3. Can the parameters such as the size of the TLB be changed? How easily?
+
+ Yes, the parameters such as the size of the TLB and size of the page, along with the
+ frame number can be changed. Consts.h contains all the parameters.
+
+4. What experiments have you run? What different techniques have you tried?
+
+   Several experiments regarding the parameter sizes have been conducted. The first the size
+   of the TLB has been increased, and decresed later. By increasing the size of the TLB
+   the TLB hit rate also got increased. Instead of LRU function we wanted to optimize the TLB by 
+   intoducing several TLBs for one Virtual Address Space to map.
+
+5. Does your program only load pages from the backing store when they are needed?
+
+  No, except the frame backstore the frames are pulled either from the TLB or the Page Table
+
+6. Does your solution allow the physical address space to be smaller than the virtual address space?
+
+   It doesn't
+
+7. Does your code follow good style practices?
+
+   Yes it does. It follows the principle of one function - single responsibility, Class Structure
+
